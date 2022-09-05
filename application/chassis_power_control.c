@@ -54,7 +54,7 @@ void superCap_speed_adaptive_chassis_power_control(chassis_move_t *chassis_power
 	
 		/*---更新一下需要用到的 动态变动的数据---*/
 	  chassis_e_ctrl.chassis_power_limit = get_chassis_power_limit();
-		if(chassis_e_ctrl.chassis_power_limit > MAX_REASONABLE_CHARGE_PWR)
+		if(chassis_e_ctrl.chassis_power_limit>MAX_REASONABLE_CHARGE_PWR) //( (chassis_e_ctrl.chassis_power_limit>MAX_REASONABLE_CHARGE_PWR) || (chassis_e_ctrl.chassis_power_limit <0) )
 		{//识别 并处理 不合理数值
 			chassis_e_ctrl.chassis_power_limit = INITIAL_STATE_CHASSIS_POWER_LIM;
 		}
@@ -290,7 +290,7 @@ void speed_adaptive_chassis_power_control(chassis_move_t *chassis_power_control)
 	
 		/*---更新一下需要用到的 动态变动的数据---*/
 	  direct_connect_e_cont.chassis_power_limit = get_chassis_power_limit();
-	  if(direct_connect_e_cont.chassis_power_limit > MAX_REASONABLE_CHARGE_PWR)
+	  if(direct_connect_e_cont.chassis_power_limit>MAX_REASONABLE_CHARGE_PWR) //( (direct_connect_e_cont.chassis_power_limit>MAX_REASONABLE_CHARGE_PWR) || (direct_connect_e_cont.chassis_power_limit <0) )
 		{//识别 并处理 不合理数值
 			direct_connect_e_cont.chassis_power_limit = 50;
 		}
