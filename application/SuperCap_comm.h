@@ -13,6 +13,9 @@
 #define CHARACTERISTIC_VOLTAGE_WULIE_CAP 24.0f//26.5f //特征电压是充电电路输出电压，对于C620必须低一些，否则会触发保护
 #define CAPACITY_WULIE_CAP 6.0f //电容容量，单位法拉
 
+#define CHARACTERISTIC_VOLTAGE_ZIDA_CAP 24.0f
+#define CAPACITY_ZIDA_CAP 6.0f
+
 extern uint8_t debug_max_pwr;
 extern uint8_t debug_fail_safe_pwr;
 extern void CAN_command_superCap(uint8_t max_pwr, uint8_t fail_safe_pwr);
@@ -25,6 +28,10 @@ extern void superCap_control_loop(void);
 
 extern void wulie_Cap_offline_proc(void);
 extern bool_t wulie_Cap_is_data_error_proc(void);
+extern void get_superCap_vol_and_energy(fp32* cap_voltage, fp32* EBank);
+extern uint16_t get_superCap_charge_pwr(void);
+extern bool_t current_superCap_is_offline(void);
+extern bool_t all_superCap_is_offline(void);
 
 typedef enum
 {
@@ -63,6 +70,9 @@ typedef struct
 	float EBPct_fromCap; //这个是相对于0J 0%-100%
 	float VBKelvin_fromCap;//
 	superCap_connection_status_e status;
+	
+//	int32_t EBank;
+	fp32 EBank;
 	
 	superCap_dataError_status_e data_EBPct_status;
 	union superCap_msg_u

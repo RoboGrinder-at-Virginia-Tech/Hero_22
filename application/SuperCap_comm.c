@@ -5,6 +5,9 @@
 #include "cmsis_os.h"
 #include "CAN_receive.h"
 #include "referee.h"
+#include "user_lib.h"
+#include "detect_task.h"
+#include "chassis_power_control.h"
 
 extern CAN_HandleTypeDef hcan1;
 extern CAN_HandleTypeDef hcan2;
@@ -55,10 +58,10 @@ void superCap_comm_bothway_init()
 	superCap_info.b = 0;
 	superCap_info.c = 0;
 	
-	current_superCap = wulie_Cap_CAN_ID;
+	current_superCap = SuperCap_ID;//SuperCap_ID wulie_Cap_CAN_ID
 }
 
-
+uint16_t temp_pwr_command=0;
 void superCap_control_loop()
 {
 	//发送任务计时, 时间到了开始一次发送
@@ -69,20 +72,80 @@ void superCap_control_loop()
 		if(current_superCap == SuperCap_ID)
 		{//紫达控制板
 			//Texas 调试
-			superCap_info.max_charge_pwr_command = get_chassis_power_limit() - 2.5f;
-				
-			//这时fail safe该不该继续按照当前允许的最大功率来SZL 5-16-2022 还是应该按等级信息来算?
-			superCap_info.fail_safe_charge_pwr_command = get_chassis_power_limit() - 2.5f;
-				
-			if(superCap_info.max_charge_pwr_command >= 101.0f)
+			temp_pwr_command = get_chassis_power_limit();
+			
+//			superCap_info.max_charge_pwr_command = get_chassis_power_limit() - 2.5f;
+//			//这时fail safe该不该继续按照当前允许的最大功率来SZL 5-16-2022 还是应该按等级信息来算?
+//			superCap_info.fail_safe_charge_pwr_command = get_chassis_power_limit() - 2.5f;
+			
+			//用temp_pwr_command来判断一个不合理数值
+			if(temp_pwr_command > 110)
 			{
-				superCap_info.max_charge_pwr_command = 40;
+//				superCap_info.max_charge_pwr_command = 60 - 3;
+//				superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
+					temp_pwr_command = INITIAL_STATE_CHASSIS_POWER_LIM;
 			}
-				
-			if(superCap_info.fail_safe_charge_pwr_command >= 101.0f)
+			
+			/*功率自适应 分档 标定
+			max_charge_pwr_command; fail_safe_charge_pwr_command; 是 uint8_t
+			*/
+			if(temp_pwr_command == 40)
 			{
-				superCap_info.fail_safe_charge_pwr_command = 40;
+				superCap_info.max_charge_pwr_command = 40 - 3;//2.5f;// 40 档 offset 2.5f
+				superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
 			}
+			else if(temp_pwr_command == 60)
+			{
+				superCap_info.max_charge_pwr_command = 60 - 3;//2.5f;// 60 档 offset 2.5f
+				superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
+			}
+			else if(temp_pwr_command == 80 )
+			{
+				superCap_info.max_charge_pwr_command = 80 - 5;
+				superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
+			}
+			else if(temp_pwr_command == 100)
+			{
+				superCap_info.max_charge_pwr_command = 80;
+				superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
+			}
+			else if(temp_pwr_command == 45)
+			{
+				superCap_info.max_charge_pwr_command = 45 - 3;//2.5f;// 40 档 offset 2.5f
+				superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
+			}
+			else if(temp_pwr_command == 50)
+			{
+				superCap_info.max_charge_pwr_command = 50 - 3;//2.5f;// 40 档 offset 2.5f
+				superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
+			}
+			else if(temp_pwr_command == 55)
+			{
+				superCap_info.max_charge_pwr_command = 55 - 3;//2.5f;// 40 档 offset 2.5f
+				superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
+			}
+			else
+			{
+				superCap_info.max_charge_pwr_command = 40 - 3;//2.5f;// 40 档 offset 2.5f
+				superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
+			}
+			
+//			superCap_info.max_charge_pwr_command = 70.0f;
+//			superCap_info.fail_safe_charge_pwr_command = 40.0f;
+				
+//			if(superCap_info.max_charge_pwr_command >= 101.0f)
+//			{
+//				superCap_info.max_charge_pwr_command = 40;
+//			}
+//				
+//			if(superCap_info.fail_safe_charge_pwr_command >= 101.0f)
+//			{
+//				superCap_info.fail_safe_charge_pwr_command = 40;
+//			}
+			
+			//For Debug Only------------------------------------------------------------------------------------------------------------------------------------
+			superCap_info.max_charge_pwr_command = 10;//2.5f;// 40 档 offset 2.5f
+			superCap_info.fail_safe_charge_pwr_command = superCap_info.max_charge_pwr_command;
 				
 			CAN_command_superCap(superCap_info.max_charge_pwr_command, superCap_info.fail_safe_charge_pwr_command);	
 		}
@@ -90,10 +153,13 @@ void superCap_control_loop()
 		{//雾列控制板
 			wulie_Cap_info.max_charge_pwr_from_ref = get_chassis_power_limit() - 2.5f;
 				
-			if(wulie_Cap_info.max_charge_pwr_from_ref > 101.0f)
-			{//超出合理范围时, 充电功率设置为40
+			if(wulie_Cap_info.max_charge_pwr_from_ref > MAX_REASONABLE_CHARGE_PWR)//101.0f)
+			{
 				wulie_Cap_info.max_charge_pwr_from_ref = 40;
 			}
+			
+			//Only for Debug
+			wulie_Cap_info.max_charge_pwr_from_ref = 30;
 				
 			wulie_Cap_info.charge_pwr_command = wulie_Cap_info.max_charge_pwr_from_ref * 100.f;
 			CAN_command_wulie_Cap(wulie_Cap_info.charge_pwr_command);
@@ -104,6 +170,79 @@ void superCap_control_loop()
 //	superCap_info.max_charge_pwr_command = ICRA_superCap_max_power; //=65w
 //	superCap_info.fail_safe_charge_pwr_command = ICRA_superCap_fail_safe_power; //=65w
 //	CAN_command_superCap(superCap_info.max_charge_pwr_command, superCap_info.fail_safe_charge_pwr_command);	
+
+/*
+根据目前使用的超级电容 返回电容组电压和剩余能量
+这里要做的就是返回合理的 传感器数据 不需要在这里考虑掉线
+*/
+void get_superCap_vol_and_energy(fp32* cap_voltage, fp32* EBank)
+{
+	fp32 temp_EBank=0, temp_cap_voltage=0;
+	if(current_superCap == SuperCap_ID)
+	{
+		temp_EBank = superCap_info.EBank;
+		temp_cap_voltage = superCap_info.VBKelvin_fromCap;
+		
+		temp_EBank = fp32_constrain(temp_EBank, 0.0f, 2106.75f);//确保数据的正确和合理性
+		temp_cap_voltage = fp32_constrain(temp_cap_voltage, 0.0f, 26.5f);
+		
+		*EBank = temp_EBank;
+		*cap_voltage = temp_cap_voltage;
+		return;
+	}
+	else
+	{
+		temp_EBank = wulie_Cap_info.EBank;
+		temp_cap_voltage = wulie_Cap_info.cap_voltage;
+		
+		temp_EBank = fp32_constrain(temp_EBank, 0.0f, 2106.75f);//确保数据的正确和合理性
+		temp_cap_voltage = fp32_constrain(temp_cap_voltage, 0.0f, 26.5f);
+		
+		*EBank = temp_EBank;
+		*cap_voltage = temp_cap_voltage;
+		return;
+	}
+}
+
+/*
+返回超级电容充电功率
+*/
+uint16_t get_superCap_charge_pwr()
+{
+	fp32 temp_charge_pwr=0;
+	if(current_superCap == SuperCap_ID)
+	{
+		temp_charge_pwr = superCap_info.max_charge_pwr_command;
+		temp_charge_pwr = fp32_constrain(temp_charge_pwr, 0.0f, MAX_REASONABLE_CHARGE_PWR);//确保数据的正确和合理性
+		
+		return (uint16_t)temp_charge_pwr;
+	}
+	else
+	{
+		temp_charge_pwr = wulie_Cap_info.max_charge_pwr_from_ref;
+		temp_charge_pwr = fp32_constrain(temp_charge_pwr, 0.0f, MAX_REASONABLE_CHARGE_PWR);//确保数据的正确和合理性
+		
+		return (uint16_t)temp_charge_pwr;
+	}
+}
+
+/*下面两个函数; 0->normal/online; 1->error/offline*/
+bool_t current_superCap_is_offline()
+{
+	if(current_superCap == SuperCap_ID)
+	{
+		return toe_is_error(SUPERCAP_TOE);
+	}
+	else
+	{
+		return toe_is_error(WULIE_CAP_TOE);
+	}
+}
+
+bool_t all_superCap_is_offline()
+{
+	return toe_is_error(SUPERCAP_TOE) && toe_is_error(WULIE_CAP_TOE);
+}
 
 /*
 SZL 3-10-2022 下发到SuperCap的数据
@@ -156,10 +295,12 @@ bool_t superCap_is_data_error_proc()
 {
 		superCap_info.status = superCap_online;
 	
-		//ICRA
-		//只判断EBPct_fromCap，因为只用这个, 这个是0% 这种 并不是0.0 - 100.0
-		//注意EBPct是可能超过100%的所以暂时把检查数据是否出错改成这个样子 -100.0 ~ 200.0
-		//下面的superCap_solve_data_error_proc也有更改
+		/*ICRA
+			只判断EBPct_fromCap，因为只用这个, 这个是0% 这种 并不是0.0 - 100.0
+			注意EBPct是可能超过100%的所以暂时把检查数据是否出错改成这个样子 -100.0 ~ 200.0
+			下面的superCap_solve_data_error_proc也有更改
+			修改意见: superCap_info 这种原始数据 最好不要动它 如果需要识别不和里数据的地方, 新建一个变量 然后赋值给那个变量
+	  */
 		if(superCap_info.EBPct_fromCap < -100.0f || superCap_info.EBPct_fromCap > 200.0f)
 		{
 			superCap_info.data_EBPct_status = SuperCap_dataIsError;
