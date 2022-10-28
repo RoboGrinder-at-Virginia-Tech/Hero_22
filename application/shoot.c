@@ -214,6 +214,13 @@ int16_t shoot_control_loop(void)
 	 shoot_control.currentLIM_shoot_speed_42mm = 10.0f + 2.0f;//shoot_control.referee_current_shooter_42mm_speed_limit;//=10
 	 //42mm没有 predict 弹速
 	 
+	 //-----10-28展示时使用 之后记得删除----------------------------------------------
+	 shoot_control.fric1_ramp.max_value = 1000;
+	 shoot_control.fric2_ramp.max_value = 1000;
+	 
+	 shoot_control.currentLIM_shoot_speed_42mm = 3.0;
+	 //---------------------------------------------------
+	 
 		//先处理42mm的
     if (shoot_control.shoot_mode == SHOOT_STOP)
     {

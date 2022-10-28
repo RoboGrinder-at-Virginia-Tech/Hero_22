@@ -1,0 +1,139 @@
+版本说明
+
+HAL_RM_2 2021-2022寒假 新步兵底盘 调试 参数
+
+SuperCap
+V1.6 
+中断 触发 硬件错误中断
+
+V1.7
+中断 触发 硬件错误中断
+被我改的乱七八遭的
+
+SuperCapCode v2.1 目前的超级电容程序
+SuperCapCode v2.2 改了充电max功率 很fail safe功率 ICRA用
+SuperCapCode v2.3 屏蔽掉温度 检测 对set_pwr直接赋值 hard code 可以正常控制超级电容模块
+通过负载检测仪验证过 5-16-2022下午 对超级电容进行调试 可以正常工作
+ 
+SuperCapCode v2.4: 5-16晚: 改好了 
+明天测试死亡后是否正常断电; ICRA充电功率 设置为固定的65w
+记得恢复屏蔽掉的VBKelvin
+
+SuperCapCode v2.5 Break: 拿给发生损坏的那块超级电容用 试一下而已 别用 判断逻辑有问题
+SuperCapCode v2.5 目前最新 使能负载后, 在VBKelvin低于某个数值时, 关闭光耦开关
+v2.6 加了变量看MOS管状态
+v2.7 超级电容功率 固定 65w 超级电容最终代码了
+
+v2.8 超级电容 85w 5-23-2022-------- ICRA可以用
+
+SuperCapCode v2.9 恢复紫达的板子 RMUL 6-26 用 
+
+TypeC ------------
+RG Infantry auto aim: IMP-CubeMX before rewrite. snail 摩擦轮 
+---------------------------------------------------
+V2.3 NewINF v2.3 RG 研发SuperCap通信之前; 将snail换成 M3508之后
+
+V2.3.0 复制 的V2.3
+
+V2.3.1 尝试 底盘功率控制
+
+3开头的就是开始SuperCap研发之后的
+
+V3.6.0 调试越界指针
+
+V3.7.0 留出越界指针boundaries 的版本 目前步兵上的版本-----------------
+
+V3.8.0 尝试DMA越界。妈的好像没有DMA越界昂
+
+V3.9.0 尝试USB问题
+
+V4.0.0 from V3.9.0(//A) 完成USB usb_buffer 越界 的问题 [512]
+->//A: 来自一样
+V5.0.0  from V3.9.0(//A) 尝试UI移植
+V6.0.0  from V3.9.0(//A) 裁判系统数据包更改
+V6.0.1 referee串口解释 17mm速度信息在改
+V6.0.2 referee串口接收 17mm速度信息改好 ICRA shooter
+验证了可以接收ICRA referee system发送的底盘功率上限 枪口初速上限 等信息 并且
+程序可以把那些值 正常的传递到 底盘去超级电容的相关变量中  shooter的相关变量中
+进行了对Texas比赛的调试 shooter toe_is_error(REFEREE_TOE) 之类的判断 可以正常进入
+
+V6.0.3.0 恢复了ICRA比赛的状态 5-16晚上改的
+V6.0.3 5-16晚: 
+恢复成了ICRA参数, 可以再试一下shoot的 max speed: temp_speed_setALL的相关逻辑 因为改了一点
+5-17早上中午 继续阅读shoot相关代码 有了很多注释 发现了 角度是乱算的; SuperCap改好了 可能正常接收
+
+V6.0.4 准备更改角度计算
+V6.0.5 完成了拨盘电机角度步进的调试
+V6.0.6 修改 拨弹电机 角度计算 底层编码器 角度方向判断 已改好, 不卡弹
+
+V6.0.7步兵完工调试
+
+V6.1.0 出发前的凌晨 调试出来的
+V6.1.0 RG UI 1 出发前凌晨最终再尝试的UI 没能显示: Super Cap这几个字符 ----------- referee 有几个结构体更新了 之前那个太老了
+So, referee.c .h 要移植到... 中 并测试**************************************************************
+NewINF v6.1.1 RG: 完成上述移植 并在5-22-2022早上进行了简单的测试;
+NewINF v6.1.2 RG: 完成了超级电容损坏情况下的修复
+NewINF v6.1.3 RG: 改了枪口超热量保护参数
+NewINF v6.1.4 RG: 更改了几个clear flag的方式
+NewINF v6.1.5 RG: 6-1-2022 MiniPC 串口协议 四元数转动到云台坐标系下
+
+NewINF v6.1.6 RG: 继续配合CV 测试发送频率 referee_usart_task 5ms
+
+//这个任务先暂停------------------
+NewINF v6.1.7 RG: YiLin超级电容 通信完成
+
+NewINF v6.1.8 RG: Automatic bus off enabled from CubeMX
+
+NewINF v6.1.9 RG: 6-7-2022接NewINF v6.1.8 RG  完成了对打击线的标定
+NewINF v6.1.9 RG UI 4:  测试 修改过后的封装库
+NewINF v6.2.0 RG: 6-8-2022移植 UI框架 山东大学开源
+NewINF v6.2.1 RG: 标定好的 底盘 火控 状态, 部分动态程序
+NewINF v6.2.2 RG: 6-11-2022 动态程序 现阶段UI完成 带解决OLED饿死 和 底层非阻塞发送
+NewINF v6.2.3 RG: 初始化发送中断 尝试非阻塞发送 
+NewINF v6.2.4 RG: 接收MiniPC信息
+NewINF v6.2.5 RG: 接收MiniPC信息 绝对角度坐标
+NewINF v6.2.6 RG: 按照云台控制逻辑修改 6-13-2022 完成了 配合CV完成绝对坐标 自瞄 按照DJI云台逻辑
+NewINF v6.2.7 RG: 删减多余注释, 开启关闭自瞄 6-14晚; 6-15凌晨 测试视频 
+
+NewINF v6.2.8 RG: shoot逻辑->优化了CAN底层接收机制 -> 升级了OLED线程 移植到步兵程序上  多的屎山删了一些了
+NewINF v6.2.9 RG: 注释上写了增加串级PID trigger motor的算法 截止6-18和v6.2.8一模一样  把从NewHero v0.0.3RG的UI自动...servo task移植过来了; 修改了(miniPC_info.autoAimFlag > 0)
+NewINF v6.2.9.1_UI_modified RG: RZ 画好了漏斗线
+NewINF v6.3.0 RG: + 手动选择 AUTOAIM AUTOFIRE对应的
+待完成:CV掉线, 热量保护 超级电容控制 和HZL聊操作:
+NewINF v6.3.2 RG: 初步完成超级电容控制 接收 拷贝给RZ 他改漏斗线 中间的小装甲板瞄准线
+NewINF v6.3.3 RG: 完成辅助瞄准的code CV掉线 保护, 完成了现阶段任务
+NewINF v6.3.5/v6.3.6/
+NewINF v6.3.7 RG: 最终最后一天 比赛 和 步兵对抗赛的一个版本
+
+V6.1.0 RG UI 2: 显示个超级电容 SuperCap几个字符
+V6.1.0 RG UI 3: 成功可以显示 Super Cap 字符串,
+
+----------------------------------
+NewSentry v0.0.2 sentry代码
+
+NewSentry v1.0.3 RG出问题的一个版本 里程计 校准 然后移动---------------------------------
+NewSentry v2.0.0 RG其它方案 通过初步自瞄测试 待完成:CV掉线, 热量保护 裁判系统离线保护 switch开关设置
+NewSentry v2.0.3 RG: 巡逻模式 + buffer
+NewSentry v2.0.4 RG: 巡逻模式 减速
+
+HeroPitchTest v0.0.1 RG
+
+NewHero v0.0.1 RG: 6-15 - -6-16凌晨 写完了大致框架: 17 和 42 摩擦轮 ->优化了shoot 的机制 ->优化了CAN底层接收机制 -> 升级了OLED线程
+NewHero v0.0.2 RG: 6-16完成了 OLED添加两个CAN2上的摩擦轮
+NewHero v0.0.3 RG: 在v0.0.2的基础上 实现自动识别当前机器人ID, 找到对应操作手客户端ID -> 完成车间通信
+NewHero v0.0.4 RG: 串级PID拨弹 单环速度退弹 基本正常; 小枪管pwm 一大一小 完成 15m/s档位的标定  
+NewHero v0.0.5 RG: Yaw PID
+NewHero v0.0.6 RG: RZ给我的改过一个版本的PID
+NewHero v0.0.7 RG: NewHero v0.0.6 RG + 手动选择 AUTOAIM AUTOFIRE对应的（调pid中） 待完成:CV掉线, 热量保护 超级电容控制 和Victor聊操作
+NewHero v0.0.8 RG: NewHero v0.0.7 RG + 完成步兵NewINF v6.3.3 RG的移植
+NewHero v0.1.2 6-25 REDHERO_PID_adjust RZ修改过的最新版本
+TypeA_RG v0.0.1 英雄侧面 驱动板 程序
+---------------------------------
+自己的底盘:
+HAL_RM_1 自己的底盘测试
+HAL_RM_2 新步兵测试的时候用的 PID参数有所变动
+
+HAL_RM_4 2021步兵 靶车 底盘 控制程序
+FinalProject math v0.0.5: 和 HAL_RM_1 和 HAL_RM_2 一样的pid内容, 但是 加了sqrt root compensation
+FinalProjectMATH2046H: pid.c pid.h    与 v0.0.5中 中的 有点不同，用了//rpm, 1*1.16e-4f = 0.0001 小于这个数值 视为死区
+HAL_RM_3 v0.0.1 RG:  same copy from completed FinalProjectMATH2046H; 
