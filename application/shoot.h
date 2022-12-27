@@ -68,9 +68,9 @@
 //42mm 拨弹电机相关参数
 #define FULL_COUNT                  18
 //拨弹速度
-#define TRIGGER_SPEED               -10.0f//-5.0f//-10.0f
-#define CONTINUE_TRIGGER_SPEED      -9.0f
-#define READY_TRIGGER_SPEED         -5.0f
+#define TRIGGER_SPEED               10.0f //-10.0f//-5.0f//-10.0f
+#define CONTINUE_TRIGGER_SPEED      9.0f //-9.0f Hero42mm没用
+#define READY_TRIGGER_SPEED         5.0f //-5.0f Hero42mm没用
 
 #define KEY_OFF_JUGUE_TIME          500
 #define SWITCH_TRIGGER_ON           0
@@ -79,19 +79,19 @@
 //卡单时间 以及反转时间
 #define BLOCK_TRIGGER_SPEED         1.0f//1.0f
 #define BLOCK_TIME                  800//700
-#define REVERSE_TIME                100//150//200//500
+#define REVERSE_TIME                300//150//200//500
 #define REVERSE_SPEED_LIMIT         13.0f
 
-#define PI_FOUR                     -0.78539816339744830961566084581988f //没用
+#define PI_FOUR                     0.78539816339744830961566084581988f //-0.78539816339744830961566084581988f //没用
 
 //17mm feeder motor控制相关参数
 #define MOTOR_RPM_TO_SPEED_17mm  				0.00290888208665721596153948461415f
 #define MOTOR_ECD_TO_ANGLE_17mm				 	0.000021305288720633905968306772076277f
 #define FULL_COUNT_17mm                  18 //未使用
 //拨弹速度
-#define TRIGGER_SPEED_17mm               -10.0f
-#define CONTINUE_TRIGGER_SPEED_17mm      -9.0f
-#define READY_TRIGGER_SPEED_17mm         -5.0f
+#define TRIGGER_SPEED_17mm               10.0f//-10.0f
+#define CONTINUE_TRIGGER_SPEED_17mm      9.0f//-9.0f
+#define READY_TRIGGER_SPEED_17mm         5.0f//-5.0f
 
 #define KEY_OFF_JUGUE_TIME_17mm          500
 #define SWITCH_TRIGGER_ON_17mm           0
@@ -103,7 +103,7 @@
 #define REVERSE_TIME_17mm                500
 #define REVERSE_SPEED_LIMIT_17mm         13.0f
 
-#define PI_FOUR_17mm                     -0.78539816339744830961566084581988f //没用
+#define PI_FOUR_17mm                     0.78539816339744830961566084581988f //-0.78539816339744830961566084581988f //没用
 //END
 /*
 Angle calculations for different robot <-> SZL 5-19-2022
@@ -118,13 +118,24 @@ Hero; 拨盘3个洞, 2pi/3 = 2.094395102f; 为了保证不过冲 set = 2.05f
 测试用旋转角度180度, 2pi/2 = pi = 3.1415926f; 
 1.5PI = 4.712388980f
 2.0PI = 6.283185307f
+
+PI_TEN 为角度增量
 */
-#define PI_TEN_17mm                      -0.55f//-0.60f//0.67f
+#define PI_TEN_17mm                      0.55f //-0.55f//-0.60f//0.67f
 //2.05f//3.1415926f//0.67f//0.698131701f//3.1415926f//2.094395102f//0.69f//initial 0.314 radian,0.69 is approximately 40 degree
 
-#define PI_TEN_42mm                      -2.05f //-2.094395102f //-2.05f //-2.00f//0.67f
+#define PI_TEN_42mm                      2.05f //-2.05f //-2.094395102f //-2.05f //-2.00f//0.67f
 #define EJECT_AMMO_ONCE_ANGLE            +1.39f//+1.047197551f
 #define AMMO_TURN_BACK_ANGLE             +0.52f
+
+/*仿照云台控制逻辑 新增一个宏定义 电机和转盘安装方向*/
+#define TRIG_MOTOR_TURN 1
+#define TRIG_MOTOR_42mm_TURN 1
+/**
+*0 - INF2022
+*1 - HERO2022
+*/
+
 /*
 SZL
 Original PID parameter
@@ -267,6 +278,9 @@ typedef enum
 
 typedef struct
 {
+	  uint8_t trigger_motor_17mm_is_online;//0x01=online; 0x00=offline
+	  uint8_t trigger_motor_42mm_is_online;//0x01=online; 0x00=offline
+	
     shoot_mode_e shoot_mode;//这个是M3508 42mm 的枪管摩擦轮
 	
 		shoot_mode_e shoot_mode_17mm;//17mm snail 电机的 开火状态

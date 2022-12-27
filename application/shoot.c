@@ -214,12 +214,6 @@ int16_t shoot_control_loop(void)
 	 shoot_control.currentLIM_shoot_speed_42mm = 10.0f + 2.0f;//shoot_control.referee_current_shooter_42mm_speed_limit;//=10
 	 //42mm没有 predict 弹速
 	 
-	 //-----10-28展示时使用 之后记得删除----------------------------------------------
-	 shoot_control.fric1_ramp.max_value = 1000;
-	 shoot_control.fric2_ramp.max_value = 1000;
-	 
-	 shoot_control.currentLIM_shoot_speed_42mm = 3.0;
-	 //---------------------------------------------------
 	 
 		//先处理42mm的
     if (shoot_control.shoot_mode == SHOOT_STOP)
@@ -292,7 +286,13 @@ int16_t shoot_control_loop(void)
         }
 				//计算拨弹轮电机PID
         PID_calc(&shoot_control.trigger_motor_pid, shoot_control.speed, shoot_control.speed_set);
-        shoot_control.given_current = (int16_t)(shoot_control.trigger_motor_pid.out);
+				
+#if TRIG_MOTOR_42mm_TURN 
+				shoot_control.given_current = -(int16_t)(shoot_control.trigger_motor_pid.out);
+#else
+				shoot_control.given_current = (int16_t)(shoot_control.trigger_motor_pid.out);
+#endif
+        
         if(shoot_control.shoot_mode < SHOOT_READY_BULLET)
         {
             shoot_control.given_current = 0;
@@ -365,7 +365,12 @@ int16_t shoot_control_loop(void)
         shoot_laser_on(); //激光开启
         //计算拨弹轮电机PID
         PID_calc(&shoot_control.trigger_motor_pid_17mm, shoot_control.speed_17mm, shoot_control.speed_set_17mm);
-        shoot_control.given_current_17mm = (int16_t)(shoot_control.trigger_motor_pid_17mm.out);
+        
+#if TRIG_MOTOR_TURN
+				shoot_control.given_current_17mm = -(int16_t)(shoot_control.trigger_motor_pid_17mm.out);
+#else
+				shoot_control.given_current_17mm = (int16_t)(shoot_control.trigger_motor_pid_17mm.out);
+#endif
         if(shoot_control.shoot_mode_17mm < SHOOT_READY_BULLET)
         {
             shoot_control.given_current_17mm = 0;
@@ -410,13 +415,13 @@ static void shoot_set_mode(void)
     //上拨判断， 一次开启，再次关闭
     if ((switch_is_up(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_up(last_s) && shoot_control.shoot_mode == SHOOT_STOP))
     {
-        shoot_control.shoot_mode = SHOOT_READY_FRIC;//上拨一次开启摩擦轮
+        shoot_control.shoot_mode = SHOOT_READY_FRIC;//上拨一次开启42mm摩擦轮
 				shoot_control.shoot_mode_17mm = SHOOT_READY_FRIC; //17mm
 			  shoot_control.user_fire_ctrl = user_SHOOT_AUTO;//开启摩擦轮 默认auto
     }
     else if ((switch_is_up(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_up(last_s) && shoot_control.shoot_mode != SHOOT_STOP))
     {
-        shoot_control.shoot_mode = SHOOT_STOP;//上拨一次再关闭摩擦轮
+        shoot_control.shoot_mode = SHOOT_STOP;//上拨一次再关闭42mm摩擦轮
 				shoot_control.shoot_mode_17mm = SHOOT_STOP;//17mm
 			  shoot_control.key_Q_cnt = 0;
     }
@@ -490,11 +495,18 @@ static void shoot_set_mode(void)
     }
     else if(shoot_control.shoot_mode == SHOOT_READY)
     {
+			if(shoot_control.trigger_motor_42mm_is_online)//发射机构断电时, shoot_mode状态机不会被置为发射相关状态
+			{
         //下拨一次或者鼠标按下一次，进入射击状态
         if ((switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_down(last_s)) || (shoot_control.press_l && shoot_control.last_press_l == 0))
         {
             shoot_control.shoot_mode = SHOOT_BULLET;
         }
+			}
+			else
+			{
+				shoot_control.shoot_mode = SHOOT_READY;
+			}
     }
     else if(shoot_control.shoot_mode == SHOOT_DONE)
     {//-----------------------
@@ -530,11 +542,18 @@ static void shoot_set_mode(void)
 		}
 		else if(shoot_control.shoot_mode_17mm == SHOOT_READY)
 		{
+			if(shoot_control.trigger_motor_17mm_is_online)//发射机构断电时, shoot_mode状态机不会被置为发射相关状态
+			{
 				//下拨一次或者鼠标按下一次，进入射击状态
 				if ((switch_is_down(shoot_control.shoot_rc->rc.s[SHOOT_RC_MODE_CHANNEL]) && !switch_is_down(last_s)) || (shoot_control.press_r && shoot_control.last_press_r == 0))
 				{
 						shoot_control.shoot_mode_17mm = SHOOT_BULLET;
 				}
+			}
+			else
+			{
+				shoot_control.shoot_mode_17mm = SHOOT_READY;
+			}
 		}
 		else if(shoot_control.shoot_mode_17mm == SHOOT_DONE)
 		{
@@ -601,10 +620,11 @@ static void shoot_set_mode(void)
 			miniPC_info.autoAimFlag = 0;
 			shoot_control.key_X_cnt = 0;
 		}
-		
 		//X按键计数以及相关检测结束
 		
-    if(shoot_control.shoot_mode_17mm > SHOOT_READY_FRIC)
+		//12-26-2022修改
+		//连续发弹判断; 发射机构断电时, shoot_mode状态机不会被置为发射相关状态
+    if(shoot_control.shoot_mode_17mm > SHOOT_READY_FRIC && shoot_control.trigger_motor_17mm_is_online)
     {
         //鼠标长按一直进入射击状态 保持连发
 				//(shoot_control.user_fire_ctrl==user_SHOOT_AUTO && shoot_control.press_l)
@@ -700,17 +720,50 @@ static void shoot_feedback_update(void)
 		static const fp32 fliter_num_17mm[3] = {1.725709860247969f, -0.75594777109163436f, 0.030237910843665373f};//17mm
 
     //二阶低通滤波
+#if TRIG_MOTOR_42mm_TURN 
     speed_fliter_1 = speed_fliter_2;
+    speed_fliter_2 = speed_fliter_3;
+    speed_fliter_3 = speed_fliter_2 * fliter_num[0] + speed_fliter_1 * fliter_num[1] - (shoot_control.shoot_motor_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num[2];
+    shoot_control.speed = speed_fliter_3;
+#else
+		speed_fliter_1 = speed_fliter_2;
     speed_fliter_2 = speed_fliter_3;
     speed_fliter_3 = speed_fliter_2 * fliter_num[0] + speed_fliter_1 * fliter_num[1] + (shoot_control.shoot_motor_measure->speed_rpm * MOTOR_RPM_TO_SPEED) * fliter_num[2];
     shoot_control.speed = speed_fliter_3;
+#endif
+		//17mm trig 电机是否离线检测
+		/*只扫描一次按键这个思路*/
+		if(toe_is_error(TRIGGER_MOTOR_17mm_TOE))
+		{
+			shoot_control.trigger_motor_17mm_is_online = 0x00;
+		}
+		else
+		{
+			shoot_control.trigger_motor_17mm_is_online = 0x01;
+		}
+		
+		//42mm trig 电机是否离线检测
+		if(toe_is_error(TRIGGER_MOTOR_TOE))
+		{
+			shoot_control.trigger_motor_42mm_is_online = 0x00;
+		}
+		else
+		{
+			shoot_control.trigger_motor_42mm_is_online = 0x01;
+		}
 		
 		//17mm 照葫芦画瓢
+#if TRIG_MOTOR_TURN
+		speed_fliter_1_17mm = speed_fliter_2_17mm;
+    speed_fliter_2_17mm = speed_fliter_3_17mm;
+    speed_fliter_3_17mm = speed_fliter_2_17mm * fliter_num_17mm[0] + speed_fliter_1_17mm * fliter_num_17mm[1] - (shoot_control.shoot_motor_measure_17mm->speed_rpm * MOTOR_RPM_TO_SPEED_17mm) * fliter_num_17mm[2];
+    shoot_control.speed_17mm = speed_fliter_3_17mm;
+#else
 		speed_fliter_1_17mm = speed_fliter_2_17mm;
     speed_fliter_2_17mm = speed_fliter_3_17mm;
     speed_fliter_3_17mm = speed_fliter_2_17mm * fliter_num_17mm[0] + speed_fliter_1_17mm * fliter_num_17mm[1] + (shoot_control.shoot_motor_measure_17mm->speed_rpm * MOTOR_RPM_TO_SPEED_17mm) * fliter_num_17mm[2];
     shoot_control.speed_17mm = speed_fliter_3_17mm;
-
+#endif
 //    /*
 //		别看这行注释哈, 它写错了: 电机圈数重置， 因为输出轴旋转一圈， 电机轴旋转 36圈，将电机轴数据处理成输出轴数据，用于控制输出轴角度
 //		应该是:
@@ -740,12 +793,20 @@ static void shoot_feedback_update(void)
 		
 		//添加了码盘值积分后 对拨弹盘angle的计算 SZL 5-19
 		//之前的转了几圈 + 当前的编码器值 将其转换为弧度制 马盘值里程计
+#if TRIG_MOTOR_42mm_TURN 
+		shoot_control.angle = -(shoot_control.shoot_motor_measure->total_ecd + shoot_control.shoot_motor_measure->delta_ecd) * MOTOR_ECD_TO_ANGLE;
+#else
 		shoot_control.angle = (shoot_control.shoot_motor_measure->total_ecd + shoot_control.shoot_motor_measure->delta_ecd) * MOTOR_ECD_TO_ANGLE;
 		//shoot_control.angle = (shoot_control.shoot_motor_measure->total_ecd + shoot_control.shoot_motor_measure->ecd) * MOTOR_ECD_TO_ANGLE;
+#endif
 		
+#if TRIG_MOTOR_TURN		
 		//新增17mm的
+		shoot_control.angle_17mm = -(shoot_control.shoot_motor_measure_17mm->total_ecd + shoot_control.shoot_motor_measure_17mm->delta_ecd) * MOTOR_ECD_TO_ANGLE_17mm;
+#else
 		shoot_control.angle_17mm = (shoot_control.shoot_motor_measure_17mm->total_ecd + shoot_control.shoot_motor_measure_17mm->delta_ecd) * MOTOR_ECD_TO_ANGLE_17mm;
-		
+#endif
+
 		//起始可以把所有按键相关状态机放到这里 从set mode中移到这里面 虽然会有耦合
 		
 		//按键V记时, V只是记录了上一次状态, 但是没有计数
@@ -998,13 +1059,25 @@ static void shoot_bullet_control_42mm(void)
         shoot_control.move_flag = 1;
     }
 		
-		if(toe_is_error(TRIGGER_MOTOR_TOE))
+//12-26-22 改掉了 不用这种控制方法了
+//		if(toe_is_error(TRIGGER_MOTOR_TOE))
+//		{
+//			shoot_control.set_angle = shoot_control.angle; //电机离线的那些执行帧, 不打弹
+//		}
+		
+		//改成如下 这段代码只是在这里保险不会进入此if
+		if(shoot_control.trigger_motor_42mm_is_online == 0x00)
 		{
-			shoot_control.set_angle = shoot_control.angle; //电机离线的那些执行帧, 不打弹
+				shoot_control.set_angle = shoot_control.angle;
+				return;
 		}
 		
+		if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
+    {
+        shoot_control.shoot_mode = SHOOT_DONE;
+    }
 		//还剩余较小角度时, 算到达了
-		if(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
+		if(shoot_control.set_angle - shoot_control.angle > 0.05f) //(fabs(shoot_control.set_angle - shoot_control.angle) > 0.05f)
 		{
 				shoot_control.trigger_speed_set = TRIGGER_SPEED;
 				//用于需要直接速度控制时的控制速度这里是堵转后反转速度 TRIGGER_SPEED符号指明正常旋转方向
@@ -1044,12 +1117,22 @@ static void shoot_bullet_control_17mm(void)
         shoot_control.set_angle_17mm = (shoot_control.angle_17mm + PI_TEN_17mm);//rad_format(shoot_control.angle + PI_TEN); shooter_rad_format
         shoot_control.move_flag_17mm = 1;
     }
+		
+		/*这段代码的测试是在NewINF v6.4.1 中测试的, 也就是不会出现:(发射机构断电时, shoot_mode状态机不会被置为发射相关状态)
+		整体的逻辑是: 如果发射机构断电, shoot_mode状态机不会被置为发射相关状态, 不会进入此函数; 这段代码只是在这里保险
+	  电机掉线, 即发射机构断电特征出现时, 放弃当前发射请求*/
+		if(shoot_control.trigger_motor_17mm_is_online == 0x00)
+		{
+				shoot_control.set_angle = shoot_control.angle;
+				return;
+		}
+		
     if(0)//shoot_control.key == SWITCH_TRIGGER_OFF)
     {
         shoot_control.shoot_mode_17mm = SHOOT_DONE;
     }
     //到达角度判断--------------注意这个是反着的
-    if (fabs(shoot_control.set_angle_17mm - shoot_control.angle_17mm) > 0.05f)//-0.05f)//> 0.05f)//< -0.05f)//(rad_format(shoot_control.set_angle - shoot_control.angle) > 0.0005f)//0.15f) //pr改动前为0.05f shooter_rad_format
+    if ((shoot_control.set_angle_17mm - shoot_control.angle_17mm) > 0.05f) //(fabs(shoot_control.set_angle_17mm - shoot_control.angle_17mm) > 0.05f)//-0.05f)//> 0.05f)//< -0.05f)//(rad_format(shoot_control.set_angle - shoot_control.angle) > 0.0005f)//0.15f) //pr改动前为0.05f shooter_rad_format
     {
         //没到达一直设置旋转速度
         shoot_control.trigger_speed_set_17mm = TRIGGER_SPEED_17mm;
@@ -1062,10 +1145,10 @@ static void shoot_bullet_control_17mm(void)
 				
     }
 		
-		if(toe_is_error(TRIGGER_MOTOR_17mm_TOE))//------------------------------------
-		{
-			shoot_control.shoot_mode_17mm = SHOOT_DONE;
-			//shoot_control.set_angle_17mm = shoot_control.angle_17mm;
-			PID_clear(&shoot_control.trigger_motor_pid_17mm);
-		}
+//		if(toe_is_error(TRIGGER_MOTOR_17mm_TOE))//------------------------------------
+//		{
+//			shoot_control.shoot_mode_17mm = SHOOT_DONE;
+//			//shoot_control.set_angle_17mm = shoot_control.angle_17mm;
+//			PID_clear(&shoot_control.trigger_motor_pid_17mm);
+//		}
 }

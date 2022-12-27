@@ -290,7 +290,7 @@ static void detect_init(uint32_t time)
 						{90, 90, 14},		//ŒÌ¡– ≥¨º∂µÁ»›
 						{10, 10, 12},		//shooter L
 						{10, 10, 12},		//shooter R
-						{10, 10, 12},		//Trigger 17mm
+						{20, 10, 12},		//Trigger 17mm
         };
 
     for (uint8_t i = 0; i < ERROR_LIST_LENGHT; i++)
