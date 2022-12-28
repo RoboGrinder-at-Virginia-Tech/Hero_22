@@ -21,12 +21,16 @@ JLinkSettings.ini
 *.scvd
 *.iex
 
-#Doesn't exist .uvopt .uvgui .uvgui.; Keep .uvoptx, files 
-#*.uvopt 
-#*.uvoptx
-#*.uvgui
-#*.uvgui.*
+#Remove .uvopt .uvgui .uvgui.; Keep .uvoptx, files 
+*.uvopt 
+*.uvoptx
+*.uvgui
+*.uvgui.*
 *.uvguix.*
+
+#Added intermediate files form Keil or Keil compiler
+*.__i
+*._ia
 
 # C - https://github.com/github/gitignore/blob/master/C.gitignore
 #modified: comment out *.lib
